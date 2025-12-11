@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         SONAR_TOKEN = 'sqa_882fae06ee9791fa6494c70f13107f507c85ac74'
+        IMAGE_NAME = 'my-app:latest'
+        CONTAINER_NAME = 'my-app-container'
     }
 
     stages {
@@ -12,7 +14,7 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build with Maven') {
             steps {
                 sh 'mvn clean package'
             }
@@ -27,6 +29,32 @@ pipeline {
                       -Dsonar.login=${SONAR_TOKEN}
                 """
             }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Construire l'image Docker
+                    sh "docker build -t ${IMAGE_NAME} ."
+                }
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                script {
+                    // Supprimer le conteneur existant si nécessaire
+                    sh "docker rm -f ${CONTAINER_NAME} || true"
+                    // Lancer le conteneur Docker
+                    sh "docker run -d --name ${CONTAINER_NAME} -p 8085:8085 ${IMAGE_NAME}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline terminé"
         }
     }
 }
